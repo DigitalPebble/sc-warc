@@ -1,3 +1,8 @@
+package com.digitalpebble.stormcrawler.warc;
+
+import org.apache.storm.hdfs.bolt.format.DefaultFileNameFormat;
+import org.apache.storm.hdfs.bolt.format.FileNameFormat;
+import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 /**
  * Licensed to DigitalPebble Ltd under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -15,57 +20,60 @@
  * limitations under the License.
  */
 
-import com.digitalpebble.storm.crawler.*;
+import com.digitalpebble.storm.crawler.ConfigurableTopology;
+import com.digitalpebble.storm.crawler.Constants;
 import com.digitalpebble.storm.crawler.bolt.FetcherBolt;
 import com.digitalpebble.storm.crawler.bolt.JSoupParserBolt;
 import com.digitalpebble.storm.crawler.bolt.SiteMapParserBolt;
 import com.digitalpebble.storm.crawler.bolt.URLPartitionerBolt;
-import com.digitalpebble.storm.crawler.indexing.StdOutIndexer;
-import com.digitalpebble.storm.crawler.persistence.StdOutStatusUpdater;
+import com.digitalpebble.storm.crawler.persistence.MemoryStatusUpdater;
 import com.digitalpebble.storm.crawler.spout.MemorySpout;
 
 import backtype.storm.metric.LoggingMetricsConsumer;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 
+import org.apache.storm.hdfs.bolt.sync.SyncPolicy;
+
 /**
  * Dummy topology to play with the spouts and bolts
  */
 public class CrawlTopology extends ConfigurableTopology {
 
-    public static void main(String[] args) throws Exception {
-        ConfigurableTopology.start(new CrawlTopology(), args);
-    }
+	public static void main(String[] args) throws Exception {
+		ConfigurableTopology.start(new CrawlTopology(), args);
+	}
 
-    @Override
-    protected int run(String[] args) {
-        TopologyBuilder builder = new TopologyBuilder();
+	@Override
+	protected int run(String[] args) {
+		TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setSpout("spout", new MemorySpout());
+		builder.setSpout("spout", new MemorySpout());
 
-        builder.setBolt("partitioner", new URLPartitionerBolt())
-                .shuffleGrouping("spout");
+		builder.setBolt("partitioner", new URLPartitionerBolt()).shuffleGrouping("spout");
 
-        builder.setBolt("fetch", new FetcherBolt()).fieldsGrouping(
-                "partitioner", new Fields("key"));
+		builder.setBolt("fetch", new FetcherBolt()).fieldsGrouping("partitioner", new Fields("key"));
 
-        builder.setBolt("sitemap", new SiteMapParserBolt())
-                .localOrShuffleGrouping("fetch");
+		builder.setBolt("sitemap", new SiteMapParserBolt()).localOrShuffleGrouping("fetch");
 
-        builder.setBolt("parse", new JSoupParserBolt()).localOrShuffleGrouping(
-                "sitemap");
+		builder.setBolt("parse", new JSoupParserBolt()).localOrShuffleGrouping("sitemap");
 
-        builder.setBolt("index", new StdOutIndexer()).localOrShuffleGrouping(
-                "parse");
+		// sync the filesystem after every 1k tuples
+		SyncPolicy syncPolicy = new CountSyncPolicy(1000);
 
-        builder.setBolt("status", new StdOutStatusUpdater())
-                .localOrShuffleGrouping("fetch", Constants.StatusStreamName)
-                .localOrShuffleGrouping("sitemap", Constants.StatusStreamName)
-                .localOrShuffleGrouping("parse", Constants.StatusStreamName)
-                .localOrShuffleGrouping("index", Constants.StatusStreamName);
+		FileNameFormat fileNameFormat = new DefaultFileNameFormat().withPath("/tmp/foo/").withExtension(".warc");
 
-        conf.registerMetricsConsumer(LoggingMetricsConsumer.class);
+		WARCSequenceFileBolt warcbolt = (WARCSequenceFileBolt) new WARCSequenceFileBolt().withFsUrl("file:///")
+				.withFileNameFormat(fileNameFormat).withSyncPolicy(syncPolicy);
 
-        return submit("crawl", conf, builder);
-    }
+		builder.setBolt("warc", warcbolt).localOrShuffleGrouping("parse");
+
+		builder.setBolt("status", new MemoryStatusUpdater()).localOrShuffleGrouping("fetch", Constants.StatusStreamName)
+				.localOrShuffleGrouping("sitemap", Constants.StatusStreamName)
+				.localOrShuffleGrouping("parse", Constants.StatusStreamName);
+
+		conf.registerMetricsConsumer(LoggingMetricsConsumer.class);
+
+		return submit("crawl", conf, builder);
+	}
 }
