@@ -1,8 +1,3 @@
-package com.digitalpebble.stormcrawler.warc;
-
-import org.apache.storm.hdfs.bolt.format.DefaultFileNameFormat;
-import org.apache.storm.hdfs.bolt.format.FileNameFormat;
-import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 /**
  * Licensed to DigitalPebble Ltd under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -19,6 +14,12 @@ import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package com.digitalpebble.stormcrawler.warc;
+
+import org.apache.storm.hdfs.bolt.format.DefaultFileNameFormat;
+import org.apache.storm.hdfs.bolt.format.FileNameFormat;
+import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 
 import com.digitalpebble.storm.crawler.ConfigurableTopology;
 import com.digitalpebble.storm.crawler.Constants;
@@ -40,40 +41,51 @@ import org.apache.storm.hdfs.bolt.sync.SyncPolicy;
  */
 public class CrawlTopology extends ConfigurableTopology {
 
-	public static void main(String[] args) throws Exception {
-		ConfigurableTopology.start(new CrawlTopology(), args);
-	}
+    public static void main(String[] args) throws Exception {
+        ConfigurableTopology.start(new CrawlTopology(), args);
+    }
 
-	@Override
-	protected int run(String[] args) {
-		TopologyBuilder builder = new TopologyBuilder();
+    @Override
+    protected int run(String[] args) {
+        TopologyBuilder builder = new TopologyBuilder();
 
-		builder.setSpout("spout", new MemorySpout());
+        builder.setSpout("spout", new MemorySpout());
 
-		builder.setBolt("partitioner", new URLPartitionerBolt()).shuffleGrouping("spout");
+        builder.setBolt("partitioner", new URLPartitionerBolt())
+                .shuffleGrouping("spout");
 
-		builder.setBolt("fetch", new FetcherBolt()).fieldsGrouping("partitioner", new Fields("key"));
+        builder.setBolt("fetch", new FetcherBolt())
+                .fieldsGrouping("partitioner", new Fields("key"));
 
-		builder.setBolt("sitemap", new SiteMapParserBolt()).localOrShuffleGrouping("fetch");
+        builder.setBolt("sitemap", new SiteMapParserBolt())
+                .localOrShuffleGrouping("fetch");
 
-		builder.setBolt("parse", new JSoupParserBolt()).localOrShuffleGrouping("sitemap");
+        builder.setBolt("parse", new JSoupParserBolt())
+                .localOrShuffleGrouping("sitemap");
 
-		// sync the filesystem after every 1k tuples
-		SyncPolicy syncPolicy = new CountSyncPolicy(1000);
+        // sync the filesystem after every 1k tuples
+        SyncPolicy syncPolicy = new CountSyncPolicy(1000);
 
-		FileNameFormat fileNameFormat = new DefaultFileNameFormat().withPath("/tmp/foo/").withExtension(".warc");
+        FileNameFormat fileNameFormat = new DefaultFileNameFormat()
+                .withPath("/tmp/foo/").withExtension(".warc");
 
-		WARCSequenceFileBolt warcbolt = (WARCSequenceFileBolt) new WARCSequenceFileBolt().withFsUrl("file:///")
-				.withFileNameFormat(fileNameFormat).withSyncPolicy(syncPolicy);
+        // WARCSequenceFileBolt warcbolt = (WARCSequenceFileBolt) new
+        // WARCSequenceFileBolt().withFsUrl("file:///")
+        // .withFileNameFormat(fileNameFormat).withSyncPolicy(syncPolicy);
 
-		builder.setBolt("warc", warcbolt).localOrShuffleGrouping("parse");
+        WARCHdfsBolt warcbolt = (WARCHdfsBolt) new WARCHdfsBolt()
+                .withFsUrl("file:///").withFileNameFormat(fileNameFormat)
+                .withSyncPolicy(syncPolicy);
 
-		builder.setBolt("status", new MemoryStatusUpdater()).localOrShuffleGrouping("fetch", Constants.StatusStreamName)
-				.localOrShuffleGrouping("sitemap", Constants.StatusStreamName)
-				.localOrShuffleGrouping("parse", Constants.StatusStreamName);
+        builder.setBolt("warc", warcbolt).localOrShuffleGrouping("parse");
 
-		conf.registerMetricsConsumer(LoggingMetricsConsumer.class);
+        builder.setBolt("status", new MemoryStatusUpdater())
+                .localOrShuffleGrouping("fetch", Constants.StatusStreamName)
+                .localOrShuffleGrouping("sitemap", Constants.StatusStreamName)
+                .localOrShuffleGrouping("parse", Constants.StatusStreamName);
 
-		return submit("crawl", conf, builder);
-	}
+        conf.registerMetricsConsumer(LoggingMetricsConsumer.class);
+
+        return submit("crawl", conf, builder);
+    }
 }

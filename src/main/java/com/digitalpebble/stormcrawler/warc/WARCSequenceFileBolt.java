@@ -17,4 +17,10 @@ public class WARCSequenceFileBolt extends SequenceFileBolt {
         withCompressionCodec("deflate");
     }
 
+    @Override
+    public void cleanup() {
+        // TODO cleanup behaviour not implemented in AbstractHdfsBolt
+        super.cleanup();
+    }
+
 }
