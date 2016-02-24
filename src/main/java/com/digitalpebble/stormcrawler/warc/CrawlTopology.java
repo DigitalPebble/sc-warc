@@ -68,14 +68,14 @@ public class CrawlTopology extends ConfigurableTopology {
 
         FileNameFormat fileNameFormat = new DefaultFileNameFormat()
                 .withPath("/tmp/foo/").withExtension(".warc");
-
-        // WARCSequenceFileBolt warcbolt = (WARCSequenceFileBolt) new
-        // WARCSequenceFileBolt().withFsUrl("file:///")
-        // .withFileNameFormat(fileNameFormat).withSyncPolicy(syncPolicy);
+        
+        byte[] warcinfo = WARCRecordFormat.generateWARCInfo();
 
         WARCHdfsBolt warcbolt = (WARCHdfsBolt) new WARCHdfsBolt()
                 .withFsUrl("file:///").withFileNameFormat(fileNameFormat)
                 .withSyncPolicy(syncPolicy);
+        
+        warcbolt.withHeader(warcinfo);
 
         builder.setBolt("warc", warcbolt).localOrShuffleGrouping("parse");
 

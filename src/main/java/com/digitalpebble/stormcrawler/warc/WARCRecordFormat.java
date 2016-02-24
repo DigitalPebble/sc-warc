@@ -23,8 +23,37 @@ public class WARCRecordFormat implements RecordFormat {
     private static final String CRLF = "\r\n";
     private static final byte[] CRLF_BYTES = { 13, 10 };
 
-    private final SimpleDateFormat warcdf = new SimpleDateFormat(
+    private static final SimpleDateFormat warcdf = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+
+    /**
+     * Generates a WARC info entry which can be stored at the beginning of each
+     * WARC file
+     **/
+    public static byte[] generateWARCInfo() {
+        StringBuffer buffer = new StringBuffer();
+        buffer.append(WARC_VERSION);
+        buffer.append(CRLF);
+
+        buffer.append("WARC-Type: warcinfo").append(CRLF);
+
+        Date now = new Date();
+        buffer.append("WARC-Date").append(": ").append(warcdf.format(now))
+                .append(CRLF);
+
+        String mainID = UUID.randomUUID().toString();
+
+        buffer.append("WARC-Record-ID").append(": ").append("<urn:uuid:")
+                .append(mainID).append(">").append(CRLF);
+
+        // TODO add WARC fields
+        // http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf
+
+        buffer.append(CRLF);
+        buffer.append(CRLF);
+        
+        return buffer.toString().getBytes(StandardCharsets.UTF_8);
+    }
 
     @Override
     public byte[] format(Tuple tuple) {
@@ -65,9 +94,9 @@ public class WARCRecordFormat implements RecordFormat {
                 .append(Integer.toString(contentLength)).append(CRLF);
 
         // TODO get actual fetch time from metadata if any
-        Date fetchedDate = new Date();
-        buffer.append("WARC-Date").append(": ")
-                .append(warcdf.format(fetchedDate)).append(CRLF);
+        Date now = new Date();
+        buffer.append("WARC-Date").append(": ").append(warcdf.format(now))
+                .append(CRLF);
 
         // check if http headers have been stored verbatim
         // if not generate a response instead
