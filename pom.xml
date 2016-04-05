@@ -75,17 +75,11 @@
  			<artifactId>storm-hdfs</artifactId>
  			<version>0.10.0</version>
  		</dependency>
- 
- 		<dependency>
- 			<groupId>com.martinkl.warc</groupId>
- 			<artifactId>warc-hadoop</artifactId>
- 			<version>0.1.0</version>
- 		</dependency>
 
 		<dependency>
 			<groupId>com.digitalpebble.stormcrawler</groupId>
 			<artifactId>storm-crawler-core</artifactId>
-			<version>0.9-SNAPSHOT</version>
+			<version>0.9</version>
 		</dependency>
 	</dependencies>
 </project>
