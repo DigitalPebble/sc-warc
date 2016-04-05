@@ -17,9 +17,7 @@
 
 package com.digitalpebble.stormcrawler.warc;
 
-import org.apache.storm.hdfs.bolt.format.DefaultFileNameFormat;
 import org.apache.storm.hdfs.bolt.format.FileNameFormat;
-import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 
 import com.digitalpebble.storm.crawler.ConfigurableTopology;
 import com.digitalpebble.storm.crawler.Constants;
@@ -34,8 +32,6 @@ import backtype.storm.metric.LoggingMetricsConsumer;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 
-import org.apache.storm.hdfs.bolt.sync.SyncPolicy;
-
 /**
  * Dummy topology to play with the spouts and bolts
  */
@@ -49,7 +45,7 @@ public class CrawlTopology extends ConfigurableTopology {
     protected int run(String[] args) {
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setSpout("spout", new MemorySpout());
+        builder.setSpout("spout", new MemorySpout("http://www.lemonde.fr"));
 
         builder.setBolt("partitioner", new URLPartitionerBolt())
                 .shuffleGrouping("spout");
@@ -63,18 +59,16 @@ public class CrawlTopology extends ConfigurableTopology {
         builder.setBolt("parse", new JSoupParserBolt())
                 .localOrShuffleGrouping("sitemap");
 
-        // sync the filesystem after every 1k tuples
-        SyncPolicy syncPolicy = new CountSyncPolicy(1000);
+        String warcFilePath = "/tmp/foo/";
 
-        FileNameFormat fileNameFormat = new DefaultFileNameFormat()
-                .withPath("/tmp/foo/").withExtension(".warc");
-        
+        FileNameFormat fileNameFormat = new WARCFileNameFormat()
+                .withPath(warcFilePath);
+
         byte[] warcinfo = WARCRecordFormat.generateWARCInfo();
 
         WARCHdfsBolt warcbolt = (WARCHdfsBolt) new WARCHdfsBolt()
-                .withFsUrl("file:///").withFileNameFormat(fileNameFormat)
-                .withSyncPolicy(syncPolicy);
-        
+                .withFsUrl("file:///").withFileNameFormat(fileNameFormat);
+
         warcbolt.withHeader(warcinfo);
 
         builder.setBolt("warc", warcbolt).localOrShuffleGrouping("parse");

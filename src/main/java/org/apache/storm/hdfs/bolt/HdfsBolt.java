@@ -17,14 +17,15 @@
  */
 package org.apache.storm.hdfs.bolt;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.task.TopologyContext;
-import backtype.storm.tuple.Tuple;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Map;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
-import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.storm.hdfs.bolt.format.FileNameFormat;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 import org.apache.storm.hdfs.bolt.rotation.FileRotationPolicy;
@@ -33,17 +34,18 @@ import org.apache.storm.hdfs.common.rotation.RotationAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.EnumSet;
-import java.util.Map;
+import backtype.storm.task.OutputCollector;
+import backtype.storm.task.TopologyContext;
+import backtype.storm.tuple.Tuple;
 
 public class HdfsBolt extends AbstractHdfsBolt {
     private static final Logger LOG = LoggerFactory.getLogger(HdfsBolt.class);
 
-    protected transient FSDataOutputStream out;
+    protected transient CompressionOutputStream out;
     private RecordFormat format;
     protected long offset = 0;
+
+    private CompressionCodec codec;
 
     public HdfsBolt withFsUrl(String fsUrl) {
         this.fsUrl = fsUrl;
@@ -85,6 +87,8 @@ public class HdfsBolt extends AbstractHdfsBolt {
             OutputCollector collector) throws IOException {
         LOG.info("Preparing HDFS Bolt...");
         this.fs = FileSystem.get(URI.create(this.fsUrl), hdfsConfig);
+        this.codec = new CompressionCodecFactory(hdfsConfig)
+                .getCodecByName("gzip");
     }
 
     @Override
@@ -94,16 +98,6 @@ public class HdfsBolt extends AbstractHdfsBolt {
             synchronized (this.writeLock) {
                 out.write(bytes);
                 this.offset += bytes.length;
-
-                if (this.syncPolicy.mark(tuple, this.offset)) {
-                    if (this.out instanceof HdfsDataOutputStream) {
-                        ((HdfsDataOutputStream) this.out)
-                                .hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
-                    } else {
-                        this.out.hsync();
-                    }
-                    this.syncPolicy.reset();
-                }
             }
 
             this.collector.ack(tuple);
@@ -128,7 +122,7 @@ public class HdfsBolt extends AbstractHdfsBolt {
     protected Path createOutputFile() throws IOException {
         Path path = new Path(this.fileNameFormat.getPath(), this.fileNameFormat
                 .getName(this.rotation, System.currentTimeMillis()));
-        this.out = this.fs.create(path);
+        this.out = codec.createOutputStream(this.fs.create(path));
         return path;
     }
 }

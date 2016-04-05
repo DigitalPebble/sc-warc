@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.storm.hdfs.bolt.HdfsBolt;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy.Units;
+import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 
 @SuppressWarnings("serial")
 public class WARCHdfsBolt extends HdfsBolt {
@@ -17,6 +18,8 @@ public class WARCHdfsBolt extends HdfsBolt {
         FileSizeRotationPolicy rotpol = new FileSizeRotationPolicy(1.0f,
                 Units.GB);
         withRecordFormat(new WARCRecordFormat()).withRotationPolicy(rotpol);
+        // dummy sync policy
+        withSyncPolicy(new CountSyncPolicy(1000));
     }
 
     public WARCHdfsBolt withHeader(byte[] header) {
