@@ -1,8 +1,8 @@
-Resources for generating WARC files with StormCrawler
+#  Resources for generating WARC files with StormCrawler
 
 Include the following snippet in your crawl topology
 
-```
+```java 
         String warcFilePath = "/warc";
 
         FileNameFormat fileNameFormat = new WARCFileNameFormat()
@@ -29,3 +29,4 @@ Include the following snippet in your crawl topology
 Each instance of the bolt will generate a WARC file and close it once it has reached the required size.
 
 Please note that the WARCHdfsBolt will automatically ack tuples - regardless of whether the writing operation was successful. The bolt is also a dead-end and does not output tuples to subsequent bolts.
+
