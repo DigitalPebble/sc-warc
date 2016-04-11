@@ -3,13 +3,13 @@ package com.digitalpebble.stormcrawler.warc;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.storm.hdfs.bolt.HdfsBolt;
+import org.apache.storm.hdfs.bolt.GzipHdfsBolt;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy.Units;
 import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 
 @SuppressWarnings("serial")
-public class WARCHdfsBolt extends HdfsBolt {
+public class WARCHdfsBolt extends GzipHdfsBolt {
 
     private byte[] header;
 
@@ -20,6 +20,8 @@ public class WARCHdfsBolt extends HdfsBolt {
         withRecordFormat(new WARCRecordFormat()).withRotationPolicy(rotpol);
         // dummy sync policy
         withSyncPolicy(new CountSyncPolicy(1000));
+        // default local filesystem
+        withFsUrl("file:///");
     }
 
     public WARCHdfsBolt withHeader(byte[] header) {

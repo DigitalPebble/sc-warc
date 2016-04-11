@@ -38,8 +38,10 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 
-public class HdfsBolt extends AbstractHdfsBolt {
-    private static final Logger LOG = LoggerFactory.getLogger(HdfsBolt.class);
+/** Unlike the standard HdfsBolt this one writes to a gzipped stream **/
+public class GzipHdfsBolt extends AbstractHdfsBolt {
+    private static final Logger LOG = LoggerFactory
+            .getLogger(GzipHdfsBolt.class);
 
     protected transient CompressionOutputStream out;
     private RecordFormat format;
@@ -47,37 +49,37 @@ public class HdfsBolt extends AbstractHdfsBolt {
 
     private CompressionCodec codec;
 
-    public HdfsBolt withFsUrl(String fsUrl) {
+    public GzipHdfsBolt withFsUrl(String fsUrl) {
         this.fsUrl = fsUrl;
         return this;
     }
 
-    public HdfsBolt withConfigKey(String configKey) {
+    public GzipHdfsBolt withConfigKey(String configKey) {
         this.configKey = configKey;
         return this;
     }
 
-    public HdfsBolt withFileNameFormat(FileNameFormat fileNameFormat) {
+    public GzipHdfsBolt withFileNameFormat(FileNameFormat fileNameFormat) {
         this.fileNameFormat = fileNameFormat;
         return this;
     }
 
-    public HdfsBolt withRecordFormat(RecordFormat format) {
+    public GzipHdfsBolt withRecordFormat(RecordFormat format) {
         this.format = format;
         return this;
     }
 
-    public HdfsBolt withSyncPolicy(SyncPolicy syncPolicy) {
+    public GzipHdfsBolt withSyncPolicy(SyncPolicy syncPolicy) {
         this.syncPolicy = syncPolicy;
         return this;
     }
 
-    public HdfsBolt withRotationPolicy(FileRotationPolicy rotationPolicy) {
+    public GzipHdfsBolt withRotationPolicy(FileRotationPolicy rotationPolicy) {
         this.rotationPolicy = rotationPolicy;
         return this;
     }
 
-    public HdfsBolt addRotationAction(RotationAction action) {
+    public GzipHdfsBolt addRotationAction(RotationAction action) {
         this.rotationActions.add(action);
         return this;
     }
