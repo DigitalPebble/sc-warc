@@ -3,8 +3,7 @@ package com.digitalpebble.stormcrawler.warc;
 import java.util.Map;
 
 import org.apache.storm.hdfs.bolt.format.FileNameFormat;
-
-import backtype.storm.task.TopologyContext;
+import org.apache.storm.task.TopologyContext;
 
 /**
  * From the WARC specs It is helpful to use practices within an institution that

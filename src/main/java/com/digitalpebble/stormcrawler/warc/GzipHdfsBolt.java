@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.storm.hdfs.bolt;
+package com.digitalpebble.stormcrawler.warc;
 
 import java.io.IOException;
 import java.net.URI;
@@ -26,17 +26,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.storm.hdfs.bolt.AbstractHdfsBolt;
 import org.apache.storm.hdfs.bolt.format.FileNameFormat;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 import org.apache.storm.hdfs.bolt.rotation.FileRotationPolicy;
 import org.apache.storm.hdfs.bolt.sync.SyncPolicy;
 import org.apache.storm.hdfs.common.rotation.RotationAction;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.tuple.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import backtype.storm.task.OutputCollector;
-import backtype.storm.task.TopologyContext;
-import backtype.storm.tuple.Tuple;
 
 /** Unlike the standard HdfsBolt this one writes to a gzipped stream **/
 public class GzipHdfsBolt extends AbstractHdfsBolt {
@@ -94,7 +94,7 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     }
 
     @Override
-    public void execute(Tuple tuple) {
+    public void writeTuple(Tuple tuple) {
         try {
             byte[] bytes = this.format.format(tuple);
             synchronized (this.writeLock) {
@@ -116,6 +116,7 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     }
 
     @Override
+    protected
     void closeOutputFile() throws IOException {
         this.out.close();
     }
@@ -126,5 +127,11 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
                 .getName(this.rotation, System.currentTimeMillis()));
         this.out = codec.createOutputStream(this.fs.create(path));
         return path;
+    }
+
+    @Override
+    protected void syncTuples() throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

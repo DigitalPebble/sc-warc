@@ -13,7 +13,7 @@ import org.apache.storm.hdfs.bolt.format.RecordFormat;
 
 import com.digitalpebble.storm.crawler.Metadata;
 
-import backtype.storm.tuple.Tuple;
+import org.apache.storm.tuple.Tuple;
 
 /** Generate a byte representation of a WARC entry from a tuple **/
 @SuppressWarnings("serial")
