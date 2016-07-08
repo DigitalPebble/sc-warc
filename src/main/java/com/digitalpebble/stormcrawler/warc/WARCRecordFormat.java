@@ -11,7 +11,7 @@ import java.util.UUID;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 
-import com.digitalpebble.storm.crawler.Metadata;
+import com.digitalpebble.stormcrawler.Metadata;
 
 import org.apache.storm.tuple.Tuple;
 
