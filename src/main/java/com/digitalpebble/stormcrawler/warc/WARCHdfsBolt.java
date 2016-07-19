@@ -3,7 +3,6 @@ package com.digitalpebble.stormcrawler.warc;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.storm.hdfs.bolt.GzipHdfsBolt;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy.Units;
 import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;

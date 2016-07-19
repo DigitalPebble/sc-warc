@@ -11,9 +11,9 @@ import java.util.UUID;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 
-import com.digitalpebble.storm.crawler.Metadata;
+import com.digitalpebble.stormcrawler.Metadata;
 
-import backtype.storm.tuple.Tuple;
+import org.apache.storm.tuple.Tuple;
 
 /** Generate a byte representation of a WARC entry from a tuple **/
 @SuppressWarnings("serial")
