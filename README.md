@@ -8,7 +8,11 @@ Include the following snippet in your crawl topology
         FileNameFormat fileNameFormat = new WARCFileNameFormat()
                 .withPath(warcFilePath);
 
-        byte[] warcinfo = WARCRecordFormat.generateWARCInfo();
+        Map<String,String> fields = new HashMap<>();
+        fields.put("software:", "StormCrawler 1.0 http://stormcrawler.net/");
+        fields.put("conformsTo:", "http://www.archive.org/documents/WarcFileFormat-1.0.html");
+        
+        byte[] warcinfo = WARCRecordFormat.generateWARCInfo(fields);
 
         WARCHdfsBolt warcbolt = (WARCHdfsBolt) new WARCHdfsBolt()
                 .withFileNameFormat(fileNameFormat);

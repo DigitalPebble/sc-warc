@@ -116,8 +116,7 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     }
 
     @Override
-    protected
-    void closeOutputFile() throws IOException {
+    protected void closeOutputFile() throws IOException {
         this.out.close();
     }
 
@@ -132,6 +131,6 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     @Override
     protected void syncTuples() throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }

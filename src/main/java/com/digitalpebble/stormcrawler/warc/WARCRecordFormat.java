@@ -5,7 +5,10 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
@@ -28,9 +31,9 @@ public class WARCRecordFormat implements RecordFormat {
 
     /**
      * Generates a WARC info entry which can be stored at the beginning of each
-     * WARC file
+     * WARC file.
      **/
-    public static byte[] generateWARCInfo() {
+    public static byte[] generateWARCInfo(Map<String, String> fields) {
         StringBuffer buffer = new StringBuffer();
         buffer.append(WARC_VERSION);
         buffer.append(CRLF);
@@ -46,12 +49,30 @@ public class WARCRecordFormat implements RecordFormat {
         buffer.append("WARC-Record-ID").append(": ").append("<urn:uuid:")
                 .append(mainID).append(">").append(CRLF);
 
-        // TODO add WARC fields
+        buffer.append("Content-Type").append(": ")
+                .append("application/warc-fields").append(CRLF);
+
+        StringBuilder fieldsBuffer = new StringBuilder();
+
+        // add WARC fields
         // http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf
+        Iterator<Entry<String, String>> iter = fields.entrySet().iterator();
+        while (iter.hasNext()) {
+            Entry<String, String> entry = iter.next();
+            fieldsBuffer.append(entry.getKey()).append(": ")
+                    .append(entry.getValue()).append(CRLF);
+        }
+
+        buffer.append("Content-Length").append(": ").append(
+                fieldsBuffer.toString().getBytes(StandardCharsets.UTF_8).length)
+                .append(CRLF);
 
         buffer.append(CRLF);
+
+        buffer.append(fieldsBuffer.toString());
+
         buffer.append(CRLF);
-        
+
         return buffer.toString().getBytes(StandardCharsets.UTF_8);
     }
 
