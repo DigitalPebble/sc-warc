@@ -1,6 +1,9 @@
 package com.digitalpebble.stormcrawler.warc;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.apache.storm.hdfs.bolt.format.FileNameFormat;
 import org.apache.storm.task.TopologyContext;
@@ -46,12 +49,25 @@ public class WARCFileNameFormat implements FileNameFormat {
     @Override
     public void prepare(Map conf, TopologyContext topologyContext) {
         this.taskIndex = topologyContext.getThisTaskIndex();
+        int totalTasks = topologyContext
+                .getComponentTasks(topologyContext.getThisComponentId()).size();
+        // single task? let's not bother with the task index in the file name
+        if (totalTasks == 1) {
+            this.taskIndex = -1;
+        }
     }
 
     @Override
     public String getName(long rotation, long timeStamp) {
-        return this.prefix + "-" + timeStamp + "-" + this.taskIndex + "-"
-                + rotation + this.extension;
+        SimpleDateFormat fileDate = new SimpleDateFormat("yyyyMMddHHmmss");
+        fileDate.setTimeZone(TimeZone.getTimeZone("GMT"));
+        String taskindexString = "";
+        if (this.taskIndex != -1) {
+            taskindexString = String.format("%02d", this.taskIndex) + "-";
+        }
+        return this.prefix + "-" + fileDate.format(new Date(timeStamp)) + "-"
+                + taskindexString + String.format("%05d", rotation)
+                + this.extension;
     }
 
     public String getPath() {
