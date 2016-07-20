@@ -15,6 +15,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 
 import com.digitalpebble.stormcrawler.Metadata;
+import com.digitalpebble.stormcrawler.protocol.HttpHeaders;
 
 import org.apache.storm.tuple.Tuple;
 
@@ -155,9 +156,16 @@ public class WARCRecordFormat implements RecordFormat {
             buffer.append("Content-Type: application/http; msgtype=response")
                     .append(CRLF);
         }
+        // for resources just use the content type provided by the server if any
+        else {
+            String ct = metadata.getFirstValue(HttpHeaders.CONTENT_TYPE);
+            if (StringUtils.isBlank(ct)) {
+                ct = "application/octet-stream";
+            }
+            buffer.append("Content-Type: ").append(ct).append(CRLF);
+        }
 
         // finished writing the WARC headers, now let's serialize it
-
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
 
         try {
