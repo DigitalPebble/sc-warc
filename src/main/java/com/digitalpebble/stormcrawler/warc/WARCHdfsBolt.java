@@ -33,8 +33,7 @@ public class WARCHdfsBolt extends GzipHdfsBolt {
 
         // write the header at the beginning of the file
         if (header != null && header.length > 0) {
-            out.write(header);
-            offset += header.length;
+            writeRecord(header);
         }
 
         return path;

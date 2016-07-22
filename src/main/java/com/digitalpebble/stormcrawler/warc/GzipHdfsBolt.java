@@ -18,14 +18,13 @@
 package com.digitalpebble.stormcrawler.warc;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.storm.hdfs.bolt.AbstractHdfsBolt;
 import org.apache.storm.hdfs.bolt.format.FileNameFormat;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
@@ -43,11 +42,21 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     private static final Logger LOG = LoggerFactory
             .getLogger(GzipHdfsBolt.class);
 
-    protected transient CompressionOutputStream out;
-    private RecordFormat format;
-    protected long offset = 0;
+    private transient OutputStream out = null;
+    private transient OutputStream origOut = null;
 
-    private CompressionCodec codec;
+    private RecordFormat format;
+    private long offset = 0;
+
+    public static class CompressedOutputStream extends GZIPOutputStream {
+        public CompressedOutputStream(OutputStream out) throws IOException {
+            super(out);
+        }
+
+        public void end() {
+            def.end();
+        }
+    }
 
     public GzipHdfsBolt withFsUrl(String fsUrl) {
         this.fsUrl = fsUrl;
@@ -89,18 +98,22 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
             OutputCollector collector) throws IOException {
         LOG.info("Preparing HDFS Bolt...");
         this.fs = FileSystem.get(URI.create(this.fsUrl), hdfsConfig);
-        this.codec = new CompressionCodecFactory(hdfsConfig)
-                .getCodecByName("gzip");
+    }
+
+    protected void writeRecord(byte[] bytes) throws IOException {
+        startRecord();
+        synchronized (this.writeLock) {
+            out.write(bytes);
+            this.offset += bytes.length;
+        }
+        endRecord();
     }
 
     @Override
     public void writeTuple(Tuple tuple) {
+        byte[] bytes = this.format.format(tuple);
         try {
-            byte[] bytes = this.format.format(tuple);
-            synchronized (this.writeLock) {
-                out.write(bytes);
-                this.offset += bytes.length;
-            }
+            writeRecord(bytes);
 
             this.collector.ack(tuple);
 
@@ -115,6 +128,19 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
         }
     }
 
+    private void startRecord() throws IOException {
+        this.out = new CompressedOutputStream(this.origOut);
+    }
+
+    private void endRecord() throws IOException {
+        CompressedOutputStream compressedOut = (CompressedOutputStream) this.out;
+        compressedOut.finish();
+        compressedOut.flush();
+        compressedOut.end();
+
+        this.out = this.origOut;
+    }
+
     @Override
     protected void closeOutputFile() throws IOException {
         this.out.close();
@@ -124,13 +150,12 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     protected Path createOutputFile() throws IOException {
         Path path = new Path(this.fileNameFormat.getPath(), this.fileNameFormat
                 .getName(this.rotation, System.currentTimeMillis()));
-        this.out = codec.createOutputStream(this.fs.create(path));
+        this.origOut = this.out = this.fs.create(path);
         return path;
     }
 
     @Override
     protected void syncTuples() throws IOException {
-        // TODO Auto-generated method stub
-
+        this.out.flush();
     }
 }
