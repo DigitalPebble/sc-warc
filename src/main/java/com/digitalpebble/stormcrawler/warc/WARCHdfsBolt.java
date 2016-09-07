@@ -19,7 +19,8 @@ public class WARCHdfsBolt extends GzipHdfsBolt {
         withRecordFormat(new WARCRecordFormat()).withRotationPolicy(rotpol);
         // dummy sync policy
         withSyncPolicy(new CountSyncPolicy(1000));
-        // trigger rotation on size of compressed WARC file (not uncompressed content)
+        // trigger rotation on size of compressed WARC file (not uncompressed
+        // content)
         this.setRotationCompressedSizeOffset(true);
         // default local filesystem
         withFsUrl("file:///");

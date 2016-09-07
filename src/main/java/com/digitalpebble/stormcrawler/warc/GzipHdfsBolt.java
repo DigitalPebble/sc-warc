@@ -96,7 +96,8 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
         return this;
     }
 
-    public GzipHdfsBolt setRotationCompressedSizeOffset(boolean useCompressedOffset) {
+    public GzipHdfsBolt setRotationCompressedSizeOffset(
+            boolean useCompressedOffset) {
         this.rotateOnCompressedOffset = useCompressedOffset;
         return this;
     }
@@ -108,19 +109,20 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
         this.fs = FileSystem.get(URI.create(this.fsUrl), hdfsConfig);
     }
 
-	protected void writeRecord(byte[] bytes) throws IOException {
-		CountingOutputStream countingStream = new CountingOutputStream(out);
-		@SuppressWarnings("resource")
-		CompressedOutputStream compressedStream = new CompressedOutputStream(countingStream);
-		synchronized (this.writeLock) {
-			compressedStream.write(bytes);
-			compressedStream.finish();
-			compressedStream.flush();
-		}
-		compressedStream.end();
-		offset += bytes.length;
-		offsetCompressed += countingStream.getByteCount();
-	}
+    protected void writeRecord(byte[] bytes) throws IOException {
+        CountingOutputStream countingStream = new CountingOutputStream(out);
+        @SuppressWarnings("resource")
+        CompressedOutputStream compressedStream = new CompressedOutputStream(
+                countingStream);
+        synchronized (this.writeLock) {
+            compressedStream.write(bytes);
+            compressedStream.finish();
+            compressedStream.flush();
+        }
+        compressedStream.end();
+        offset += bytes.length;
+        offsetCompressed += countingStream.getByteCount();
+    }
 
     @Override
     public void writeTuple(Tuple tuple) {
@@ -131,7 +133,7 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
             this.collector.ack(tuple);
 
             if (this.rotationPolicy.mark(tuple,
-                     (rotateOnCompressedOffset ? offsetCompressed : offset))) {
+                    (rotateOnCompressedOffset ? offsetCompressed : offset))) {
                 rotateOutputFile(); // synchronized
                 this.offset = 0;
                 this.offsetCompressed = 0;
