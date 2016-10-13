@@ -73,6 +73,7 @@ public class WARCRecordFormat implements RecordFormat {
         buffer.append(fieldsBuffer.toString());
 
         buffer.append(CRLF);
+        buffer.append(CRLF);
 
         return buffer.toString().getBytes(StandardCharsets.UTF_8);
     }
