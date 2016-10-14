@@ -12,11 +12,9 @@ Include the following snippet in your crawl topology
         fields.put("software:", "StormCrawler 1.0 http://stormcrawler.net/");
         fields.put("conformsTo:", "http://www.archive.org/documents/WarcFileFormat-1.0.html");
         
-        byte[] warcinfo = WARCRecordFormat.generateWARCInfo(fields);
-
         WARCHdfsBolt warcbolt = (WARCHdfsBolt) new WARCHdfsBolt()
                 .withFileNameFormat(fileNameFormat);
-        warcbolt.withHeader(warcinfo);
+        warcbolt.withHeader(fields);
 
         // can specify the filesystem - will use the local FS by default
         String fsURL = "hdfs://localhost:9000";
