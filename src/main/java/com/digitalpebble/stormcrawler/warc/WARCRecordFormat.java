@@ -3,6 +3,7 @@ package com.digitalpebble.stormcrawler.warc;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
@@ -11,6 +12,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
+import org.apache.commons.codec.binary.Base32;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 
@@ -29,6 +32,19 @@ public class WARCRecordFormat implements RecordFormat {
 
     private static final SimpleDateFormat warcdf = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+
+    private static final Base32 base32 = new Base32();
+    private static final String digestNoContent = getDigestSha1(new byte[0]);
+
+    public static String getDigestSha1(byte[] bytes) {
+        return "sha1:" + base32.encodeAsString(DigestUtils.sha1(bytes));
+    }
+
+    public static String getDigestSha1(byte[] bytes1, byte[] bytes2) {
+        MessageDigest sha1 = DigestUtils.getSha1Digest();
+        sha1.update(bytes1);
+        return "sha1:" + base32.encodeAsString(sha1.digest(bytes2));
+    }
 
     /**
      * Generates a WARC info entry which can be stored at the beginning of each
@@ -106,8 +122,14 @@ public class WARCRecordFormat implements RecordFormat {
                 .append(mainID).append(">").append(CRLF);
 
         int contentLength = 0;
+        String payloadDigest = digestNoContent;
+        String blockDigest;
         if (content != null) {
             contentLength = content.length;
+            payloadDigest = getDigestSha1(content);
+            blockDigest = getDigestSha1(httpheaders, content);
+        } else {
+            blockDigest = getDigestSha1(httpheaders);
         }
 
         // add the length of the http header
@@ -165,6 +187,11 @@ public class WARCRecordFormat implements RecordFormat {
             }
             buffer.append("Content-Type: ").append(ct).append(CRLF);
         }
+
+        buffer.append("WARC-Payload-Digest").append(": ").append(payloadDigest)
+                .append(CRLF);
+        buffer.append("WARC-Block-Digest").append(": ").append(blockDigest)
+                .append(CRLF);
 
         // finished writing the WARC headers, now let's serialize it
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
