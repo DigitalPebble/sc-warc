@@ -46,8 +46,6 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     private transient OutputStream out = null;
 
     private RecordFormat format;
-    private long offset = 0;
-    private long offsetCompressed = 0;
 
     private boolean rotateOnCompressedOffset = false;
 
@@ -120,29 +118,16 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
             compressedStream.flush();
         }
         compressedStream.end();
-        offset += bytes.length;
-        offsetCompressed += countingStream.getByteCount();
+        if (rotateOnCompressedOffset) {
+            offset += countingStream.getByteCount();
+        } else {
+            offset += bytes.length;
+        }
     }
 
     @Override
-    public void writeTuple(Tuple tuple) {
-        byte[] bytes = this.format.format(tuple);
-        try {
-            writeRecord(bytes);
-
-            this.collector.ack(tuple);
-
-            if (this.rotationPolicy.mark(tuple,
-                    (rotateOnCompressedOffset ? offsetCompressed : offset))) {
-                rotateOutputFile(); // synchronized
-                this.offset = 0;
-                this.offsetCompressed = 0;
-                this.rotationPolicy.reset();
-            }
-        } catch (IOException e) {
-            this.collector.reportError(e);
-            this.collector.fail(tuple);
-        }
+    public void writeTuple(Tuple tuple) throws IOException {
+        writeRecord(this.format.format(tuple));
     }
 
     @Override
