@@ -147,4 +147,15 @@ public class GzipHdfsBolt extends AbstractHdfsBolt {
     protected void syncTuples() throws IOException {
         this.out.flush();
     }
+    
+    @Override
+    public void cleanup() {
+        LOG.info("Cleanup called on bolt");
+        try {
+            this.out.flush();
+            this.out.close();
+        } catch (IOException e) {
+            LOG.error("Exception while calling cleanup");
+        }
+    }    
 }
