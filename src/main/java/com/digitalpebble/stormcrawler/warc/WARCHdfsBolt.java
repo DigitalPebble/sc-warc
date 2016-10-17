@@ -1,6 +1,8 @@
 package com.digitalpebble.stormcrawler.warc;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.storm.hdfs.bolt.rotation.FileSizeRotationPolicy;
@@ -10,7 +12,7 @@ import org.apache.storm.hdfs.bolt.sync.CountSyncPolicy;
 @SuppressWarnings("serial")
 public class WARCHdfsBolt extends GzipHdfsBolt {
 
-    private byte[] header;
+    private Map<String, String> header_fields;
 
     public WARCHdfsBolt() {
         super();
@@ -26,13 +28,21 @@ public class WARCHdfsBolt extends GzipHdfsBolt {
         withFsUrl("file:///");
     }
 
-    public WARCHdfsBolt withHeader(byte[] header) {
-        this.header = header;
+    public WARCHdfsBolt withHeader(Map<String, String> header_fields) {
+        this.header_fields = header_fields;
         return this;
     }
 
     protected Path createOutputFile() throws IOException {
         Path path = super.createOutputFile();
+
+        Date now = new Date();
+
+        // overrides the filename and creation date in the headers
+        header_fields.put("WARC-Date", WARCRecordFormat.WARC_DF.format(now));
+        header_fields.put("WARC-Filename", path.getName());
+
+        byte[] header = WARCRecordFormat.generateWARCInfo(header_fields);
 
         // write the header at the beginning of the file
         if (header != null && header.length > 0) {

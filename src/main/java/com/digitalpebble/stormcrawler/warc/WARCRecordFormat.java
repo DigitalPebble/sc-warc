@@ -30,7 +30,7 @@ public class WARCRecordFormat implements RecordFormat {
     private static final String CRLF = "\r\n";
     private static final byte[] CRLF_BYTES = { 13, 10 };
 
-    private static final SimpleDateFormat warcdf = new SimpleDateFormat(
+    public static final SimpleDateFormat WARC_DF = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
 
     private static final Base32 base32 = new Base32();
@@ -57,11 +57,14 @@ public class WARCRecordFormat implements RecordFormat {
 
         buffer.append("WARC-Type: warcinfo").append(CRLF);
 
-        Date now = new Date();
-        buffer.append("WARC-Date").append(": ").append(warcdf.format(now))
-                .append(CRLF);
-
         String mainID = UUID.randomUUID().toString();
+
+        // retrieve the date and filename from the map
+        String date = fields.get("WARC-Date");
+        buffer.append("WARC-Date: ").append(date).append(CRLF);
+
+        String filename = fields.get("WARC-Filename");
+        buffer.append("WARC-Filename: ").append(filename).append(CRLF);
 
         buffer.append("WARC-Record-ID").append(": ").append("<urn:uuid:")
                 .append(mainID).append(">").append(CRLF);
@@ -76,8 +79,11 @@ public class WARCRecordFormat implements RecordFormat {
         Iterator<Entry<String, String>> iter = fields.entrySet().iterator();
         while (iter.hasNext()) {
             Entry<String, String> entry = iter.next();
-            fieldsBuffer.append(entry.getKey()).append(": ")
-                    .append(entry.getValue()).append(CRLF);
+            String key = entry.getKey();
+            if (key.startsWith("WARC-"))
+                continue;
+            fieldsBuffer.append(key).append(": ").append(entry.getValue())
+                    .append(CRLF);
         }
 
         buffer.append("Content-Length").append(": ").append(
@@ -140,7 +146,7 @@ public class WARCRecordFormat implements RecordFormat {
 
         // TODO get actual fetch time from metadata if any
         Date now = new Date();
-        buffer.append("WARC-Date").append(": ").append(warcdf.format(now))
+        buffer.append("WARC-Date").append(": ").append(WARC_DF.format(now))
                 .append(CRLF);
 
         // check if http headers have been stored verbatim
